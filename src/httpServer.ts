@@ -79,9 +79,38 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
     req.on('aborted', cleanup);
     res.on('close', cleanup);
 
+    // Log request details before handling
+    console.error(
+      `[Before Handle] ${req.method} ${req.path} | Headers: ${JSON.stringify({
+        'content-type': req.headers['content-type'],
+        'accept': req.headers.accept,
+        'x-session-id': req.headers['x-session-id'],
+      })} | Body length: ${req.headers['content-length'] || 0}`,
+    );
+
+    // Set a timeout to detect if handleRequest hangs
+    const handleTimeout = setTimeout(() => {
+      if (!res.headersSent) {
+        console.error(`[Timeout] Request ${req.method} ${req.path} took too long (>30s)`);
+      }
+    }, 30000);
+
     try {
       await transport.handleRequest(req, res);
+      clearTimeout(handleTimeout);
+      
+      // Log after handling
+      if (res.headersSent) {
+        console.error(
+          `[After Handle] ${req.method} ${req.path} | Status: ${res.statusCode} | Headers sent: true | Finished: ${res.writableEnded}`,
+        );
+      } else {
+        console.error(
+          `[After Handle] ${req.method} ${req.path} | Headers sent: false | Writable ended: ${res.writableEnded}`,
+        );
+      }
     } catch (error) {
+      clearTimeout(handleTimeout);
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       
