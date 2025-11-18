@@ -9,12 +9,15 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     allowedOrigins: ['*'],
+    onsessionclosed: async () => {
+      // Clean up when session is closed
+      console.error('[MCP] Session closed, cleaning up streams');
+    },
   });
 
   await server.connect(transport);
 
   const app = express();
-  let activeSseResponse: Response | null = null;
 
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -52,25 +55,37 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       return next();
     }
 
+    // Intercept SSE GET requests to close any existing stream before SDK processes it
     const isSseRequest = req.method === 'GET' && req.headers.accept?.includes('text/event-stream');
-
-    if (isSseRequest && activeSseResponse && activeSseResponse !== res && !activeSseResponse.writableEnded) {
-      activeSseResponse.end();
-    }
-
+    
     if (isSseRequest) {
-      res.on('close', () => {
-        if (activeSseResponse === res) {
-          activeSseResponse = null;
+      // Access internal stream mapping to check for existing SSE stream
+      const transportAny = transport as any;
+      const standaloneSseStreamId = '_GET_stream';
+      const streamMapping = transportAny._streamMapping;
+      
+      if (streamMapping) {
+        const existingStream = streamMapping.get(standaloneSseStreamId);
+        
+        if (existingStream && !existingStream.writableEnded) {
+          console.error('[MCP] Closing existing SSE stream before opening new one');
+          try {
+            existingStream.end();
+            // Remove from mapping immediately to prevent conflict
+            streamMapping.delete(standaloneSseStreamId);
+            // Give it a moment to close
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          } catch (error) {
+            console.error('[MCP] Error closing existing stream:', error);
+            // Still remove from mapping even if closing failed
+            streamMapping.delete(standaloneSseStreamId);
+          }
         }
-      });
+      }
     }
 
     try {
       await transport.handleRequest(req, res);
-      if (isSseRequest) {
-        activeSseResponse = res;
-      }
     } catch (error) {
       console.error('HTTP request handling error:', error);
       if (!res.headersSent) {
