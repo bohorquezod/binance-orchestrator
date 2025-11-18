@@ -29,14 +29,10 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'content-type,accept');
-    // Disable buffering for SSE
+    // Disable buffering for SSE (important for Traefik/nginx)
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Cache-Control', 'no-cache');
-    // SSE headers
-    if (req.headers.accept?.includes('text/event-stream')) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Connection', 'keep-alive');
-    }
+    // Note: Do not set SSE headers here - let the MCP SDK handle them
     if (req.method === 'OPTIONS') {
       res.status(204).end();
       return;
@@ -65,6 +61,13 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       return next();
     }
 
+    // Log incoming MCP requests for debugging
+    const acceptHeader = req.headers.accept || '';
+    const isSSE = acceptHeader.includes('text/event-stream');
+    console.error(
+      `[MCP Request] ${req.method} ${req.path} | Accept: ${acceptHeader} | SSE: ${isSSE} | Session: ${req.headers['x-session-id'] || 'none'}`,
+    );
+
     // Handle connection cleanup on client disconnect
     const cleanup = () => {
       if (!res.writableEnded) {
@@ -80,12 +83,19 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       await transport.handleRequest(req, res);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
       
-      // Log conflict errors for debugging
+      // Enhanced logging for different error types
       if (errorMessage.includes('Conflict') || errorMessage.includes('Failed to open SSE stream')) {
         console.error(`[SSE Conflict] Path: ${req.path}, Method: ${req.method}, Error: ${errorMessage}`);
+        if (errorStack) {
+          console.error(`[SSE Conflict] Stack: ${errorStack}`);
+        }
       } else {
-        console.error('HTTP request handling error:', error);
+        console.error(`[HTTP Error] Path: ${req.path}, Method: ${req.method}, Error: ${errorMessage}`);
+        if (errorStack) {
+          console.error(`[HTTP Error] Stack: ${errorStack}`);
+        }
       }
 
       if (!res.headersSent) {
