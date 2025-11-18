@@ -76,13 +76,17 @@ In your `.cursor/mcp.json`:
 {
   "mcpServers": {
     "binance-db-api": {
-      "url": "http://mcp.borasta.sytes.net:3000/binance-db-api"
+      "url": "http://mcp.borasta.sytes.net/binance-db-api"
     }
   }
 }
 ```
 
-The URL should point to where your reverse proxy/gateway exposes the MCP server.
+**Important Notes:**
+- The URL should **NOT** include the port number when using Traefik
+- The path `/binance-db-api` is stripped by Traefik middleware, so the MCP server receives requests at `/` or `/.well-known/mcp`
+- Make sure the entrypoint `mcp` is configured in Traefik to listen on port 80
+- The URL should point to where your reverse proxy/gateway exposes the MCP server
 
 ## Health Check
 

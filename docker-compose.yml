@@ -19,7 +19,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=proxy
       - traefik.http.routers.binance-db-api-mcp.rule=Host(`mcp.borasta.sytes.net`) && PathPrefix(`/binance-db-api`)
-      - traefik.http.routers.binance-db-api-mcp.entrypoints=mcp
+      - traefik.http.routers.binance-db-api-mcp.entrypoints=web
       - traefik.http.routers.binance-db-api-mcp.tls=false
       - traefik.http.routers.binance-db-api-mcp.middlewares=binance-db-api-mcp-strip,binance-db-api-mcp-sse@docker
       - traefik.http.routers.binance-db-api-mcp.service=binance-db-api-mcp
