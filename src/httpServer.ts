@@ -5,9 +5,19 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { HttpConfig } from './config.js';
 import { normalizeForComparison } from './config.js';
 
+// Generate unique session IDs to avoid conflicts on reconnection
+let sessionCounter = 0;
+
+function generateSessionId(): string {
+  const timestamp = Date.now();
+  const counter = ++sessionCounter;
+  const random = Math.random().toString(36).substring(2, 9);
+  return `${timestamp}-${counter}-${random}`;
+}
+
 export async function startHttpServer(server: McpServer, httpConfig: HttpConfig) {
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+    sessionIdGenerator: generateSessionId,
     allowedOrigins: ['*'],
   });
 
@@ -22,6 +32,11 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
     // Disable buffering for SSE
     res.setHeader('X-Accel-Buffering', 'no');
     res.setHeader('Cache-Control', 'no-cache');
+    // SSE headers
+    if (req.headers.accept?.includes('text/event-stream')) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Connection', 'keep-alive');
+    }
     if (req.method === 'OPTIONS') {
       res.status(204).end();
       return;
@@ -50,19 +65,50 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       return next();
     }
 
+    // Handle connection cleanup on client disconnect
+    const cleanup = () => {
+      if (!res.writableEnded) {
+        res.destroy();
+      }
+    };
+
+    req.on('close', cleanup);
+    req.on('aborted', cleanup);
+    res.on('close', cleanup);
+
     try {
       await transport.handleRequest(req, res);
     } catch (error) {
-      console.error('HTTP request handling error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Log conflict errors for debugging
+      if (errorMessage.includes('Conflict') || errorMessage.includes('Failed to open SSE stream')) {
+        console.error(`[SSE Conflict] Path: ${req.path}, Method: ${req.method}, Error: ${errorMessage}`);
+      } else {
+        console.error('HTTP request handling error:', error);
+      }
+
       if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32603,
-            message: 'Internal server error',
-          },
-          id: null,
-        });
+        // Return 409 Conflict for SSE stream conflicts
+        if (errorMessage.includes('Conflict') || errorMessage.includes('Failed to open SSE stream')) {
+          res.status(409).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Session conflict. Please retry with a new connection.',
+            },
+            id: null,
+          });
+        } else {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32603,
+              message: 'Internal server error',
+            },
+            id: null,
+          });
+        }
       } else if (!res.writableEnded) {
         res.end();
       }
