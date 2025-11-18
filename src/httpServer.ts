@@ -50,17 +50,6 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       return next();
     }
 
-    // Handle connection close to clean up SSE sessions
-    req.on('close', () => {
-      if (!res.writableEnded) {
-        console.error(`[SSE] Connection closed for path: ${req.path}`);
-      }
-    });
-
-    req.on('aborted', () => {
-      console.error(`[SSE] Connection aborted for path: ${req.path}`);
-    });
-
     try {
       await transport.handleRequest(req, res);
     } catch (error) {
