@@ -18,7 +18,10 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'content-type');
+    res.setHeader('Access-Control-Allow-Headers', 'content-type,accept');
+    // Disable buffering for SSE
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Cache-Control', 'no-cache');
     if (req.method === 'OPTIONS') {
       res.status(204).end();
       return;
