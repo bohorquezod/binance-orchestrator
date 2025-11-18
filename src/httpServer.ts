@@ -14,6 +14,7 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
   await server.connect(transport);
 
   const app = express();
+  let activeSseResponse: Response | null = null;
 
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -51,8 +52,25 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       return next();
     }
 
+    const isSseRequest = req.method === 'GET' && req.headers.accept?.includes('text/event-stream');
+
+    if (isSseRequest && activeSseResponse && activeSseResponse !== res && !activeSseResponse.writableEnded) {
+      activeSseResponse.end();
+    }
+
+    if (isSseRequest) {
+      res.on('close', () => {
+        if (activeSseResponse === res) {
+          activeSseResponse = null;
+        }
+      });
+    }
+
     try {
       await transport.handleRequest(req, res);
+      if (isSseRequest) {
+        activeSseResponse = res;
+      }
     } catch (error) {
       console.error('HTTP request handling error:', error);
       if (!res.headersSent) {
