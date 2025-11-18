@@ -21,14 +21,11 @@ services:
       - traefik.http.routers.binance-db-api-mcp.rule=Host(`mcp.borasta.sytes.net`) && PathPrefix(`/binance-db-api`)
       - traefik.http.routers.binance-db-api-mcp.entrypoints=mcp
       - traefik.http.routers.binance-db-api-mcp.tls=false
-      - traefik.http.routers.binance-db-api-mcp.middlewares=binance-db-api-mcp-strip,binance-db-api-mcp-sse@docker
+      - traefik.http.routers.binance-db-api-mcp.middlewares=binance-db-api-mcp-strip@docker
       - traefik.http.routers.binance-db-api-mcp.service=binance-db-api-mcp
       - traefik.http.middlewares.binance-db-api-mcp-strip.stripprefix.prefixes=/binance-db-api
       - traefik.http.services.binance-db-api-mcp.loadbalancer.server.port=3000
       - traefik.http.services.binance-db-api-mcp.loadbalancer.server.scheme=http
-      # SSE (Server-Sent Events) configuration
-      - traefik.http.middlewares.binance-db-api-mcp-sse.buffering=false
-      - traefik.http.middlewares.binance-db-api-mcp-sse.headers.customrequestheaders.X-Accel-Buffering=no
     healthcheck:
       test:
         [
