@@ -4,10 +4,11 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { HttpConfig } from './config.js';
 import { normalizeForComparison } from './config.js';
+import { randomUUID } from 'crypto';
 
 export async function startHttpServer(server: McpServer, httpConfig: HttpConfig) {
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+    sessionIdGenerator: () => randomUUID(),
     allowedOrigins: ['*'],
   });
 
@@ -49,6 +50,17 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
     if (!httpConfig.allowedMcpPaths.has(normalizedPath)) {
       return next();
     }
+
+    // Handle connection close to clean up SSE sessions
+    req.on('close', () => {
+      if (!res.writableEnded) {
+        console.error(`[SSE] Connection closed for path: ${req.path}`);
+      }
+    });
+
+    req.on('aborted', () => {
+      console.error(`[SSE] Connection aborted for path: ${req.path}`);
+    });
 
     try {
       await transport.handleRequest(req, res);
