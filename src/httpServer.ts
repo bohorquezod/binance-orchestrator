@@ -61,93 +61,19 @@ export async function startHttpServer(server: McpServer, httpConfig: HttpConfig)
       return next();
     }
 
-    // Log incoming MCP requests for debugging
-    const acceptHeader = req.headers.accept || '';
-    const isSSE = acceptHeader.includes('text/event-stream');
-    console.error(
-      `[MCP Request] ${req.method} ${req.path} | Accept: ${acceptHeader} | SSE: ${isSSE} | Session: ${req.headers['x-session-id'] || 'none'}`,
-    );
-
-    // Handle connection cleanup on client disconnect
-    const cleanup = () => {
-      if (!res.writableEnded) {
-        res.destroy();
-      }
-    };
-
-    req.on('close', cleanup);
-    req.on('aborted', cleanup);
-    res.on('close', cleanup);
-
-    // Log request details before handling
-    console.error(
-      `[Before Handle] ${req.method} ${req.path} | Headers: ${JSON.stringify({
-        'content-type': req.headers['content-type'],
-        'accept': req.headers.accept,
-        'x-session-id': req.headers['x-session-id'],
-      })} | Body length: ${req.headers['content-length'] || 0}`,
-    );
-
-    // Set a timeout to detect if handleRequest hangs
-    const handleTimeout = setTimeout(() => {
-      if (!res.headersSent) {
-        console.error(`[Timeout] Request ${req.method} ${req.path} took too long (>30s)`);
-      }
-    }, 30000);
-
     try {
       await transport.handleRequest(req, res);
-      clearTimeout(handleTimeout);
-      
-      // Log after handling
-      if (res.headersSent) {
-        console.error(
-          `[After Handle] ${req.method} ${req.path} | Status: ${res.statusCode} | Headers sent: true | Finished: ${res.writableEnded}`,
-        );
-      } else {
-        console.error(
-          `[After Handle] ${req.method} ${req.path} | Headers sent: false | Writable ended: ${res.writableEnded}`,
-        );
-      }
     } catch (error) {
-      clearTimeout(handleTimeout);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      
-      // Enhanced logging for different error types
-      if (errorMessage.includes('Conflict') || errorMessage.includes('Failed to open SSE stream')) {
-        console.error(`[SSE Conflict] Path: ${req.path}, Method: ${req.method}, Error: ${errorMessage}`);
-        if (errorStack) {
-          console.error(`[SSE Conflict] Stack: ${errorStack}`);
-        }
-      } else {
-        console.error(`[HTTP Error] Path: ${req.path}, Method: ${req.method}, Error: ${errorMessage}`);
-        if (errorStack) {
-          console.error(`[HTTP Error] Stack: ${errorStack}`);
-        }
-      }
-
+      console.error('HTTP request handling error:', error);
       if (!res.headersSent) {
-        // Return 409 Conflict for SSE stream conflicts
-        if (errorMessage.includes('Conflict') || errorMessage.includes('Failed to open SSE stream')) {
-          res.status(409).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32000,
-              message: 'Session conflict. Please retry with a new connection.',
-            },
-            id: null,
-          });
-        } else {
-          res.status(500).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32603,
-              message: 'Internal server error',
-            },
-            id: null,
-          });
-        }
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal server error',
+          },
+          id: null,
+        });
       } else if (!res.writableEnded) {
         res.end();
       }
