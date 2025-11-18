@@ -5,19 +5,9 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { HttpConfig } from './config.js';
 import { normalizeForComparison } from './config.js';
 
-// Generate unique session IDs to avoid conflicts on reconnection
-let sessionCounter = 0;
-
-function generateSessionId(): string {
-  const timestamp = Date.now();
-  const counter = ++sessionCounter;
-  const random = Math.random().toString(36).substring(2, 9);
-  return `${timestamp}-${counter}-${random}`;
-}
-
 export async function startHttpServer(server: McpServer, httpConfig: HttpConfig) {
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: generateSessionId,
+    sessionIdGenerator: undefined,
     allowedOrigins: ['*'],
   });
 
