@@ -19,6 +19,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY .env.example ./
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -G nodejs -u 1001 && \
     chown -R nodejs:nodejs /app
