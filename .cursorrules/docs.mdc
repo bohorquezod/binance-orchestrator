@@ -1,0 +1,165 @@
+---
+description: When writing or updating documentation, creating new docs, or discussing documentation standards
+alwaysApply: false
+---
+
+# Documentation Standards
+
+## Documentation Structure
+
+### Location
+- ✅ Main documentation in `docs/` folder
+- ✅ README.md in root for quick reference
+- ✅ Code documentation with JSDoc comments
+- ✅ API documentation with Swagger/OpenAPI
+
+### Documentation Files
+- `docs/README.md` - Index and overview
+- `docs/architecture.md` - System architecture
+- `docs/endpoints.md` - API endpoints specification
+- `docs/data-flow.md` - Data pipelines and flows
+- `docs/dependencies.md` - Dependencies and their purpose
+- `docs/conventions.md` - Code conventions
+- `docs/folder-structure.md` - Project structure
+- `docs/testing.md` - Testing strategy
+- `docs/deployment.md` - Deployment processes
+- `docs/versioning.md` - Versioning standards
+
+## Code Documentation
+
+### JSDoc Comments
+- ✅ Document all public functions
+- ✅ Document parameters and return types
+- ✅ Include examples when helpful
+- ✅ Use `@param` and `@returns` tags
+
+**Example:**
+```typescript
+/**
+ * Processes a CSV file from file-storage-api and saves to binance-db-api
+ * @param fileId ID of the CSV file to process
+ * @returns Processing result with record count
+ * @throws {Error} If file is not found or processing fails
+ */
+async processAndSave(fileId: string): Promise<{ recordsProcessed: number; success: boolean }> {
+  // ...
+}
+```
+
+### Swagger Documentation
+- ✅ Document all API endpoints
+- ✅ Include request/response examples
+- ✅ Specify error codes
+- ✅ Use `@swagger` comments in controllers
+
+**Example:**
+```typescript
+/**
+ * @swagger
+ * /api/v1/orchestrator/process-csv:
+ *   post:
+ *     summary: Process a CSV file
+ *     description: Retrieves a CSV file, parses it, and saves to database
+ *     tags: [Orchestrator]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ProcessCsvRequest'
+ *     responses:
+ *       200:
+ *         description: CSV processed successfully
+ */
+```
+
+## Updating Documentation
+
+### Rules
+- ✅ Update documentation when code changes
+- ✅ Keep documentation in sync with code
+- ✅ Update related documentation files together
+- ✅ Update cursor rules when documentation changes
+
+### When to Update
+- New feature added → Update architecture, endpoints, data-flow
+- Code refactored → Update architecture, folder-structure
+- New dependency → Update dependencies.md
+- Convention changed → Update conventions.md, cursor rules
+- Deployment process changed → Update deployment.md
+
+## Documentation Style
+
+### Writing Style
+- ✅ Clear and concise
+- ✅ Use examples when helpful
+- ✅ Use code blocks for code examples
+- ✅ Use diagrams when appropriate
+- ✅ Keep sections focused
+
+### Formatting
+- ✅ Use markdown formatting
+- ✅ Use headers for structure
+- ✅ Use lists for multiple items
+- ✅ Use code blocks with language tags
+- ✅ Use tables for structured data
+
+## Consistency
+
+### Rules
+- ✅ Documentation and cursor rules must be consistent
+- ✅ If documentation changes, update cursor rules
+- ✅ If cursor rules change, update documentation
+- ✅ Keep examples up to date
+
+### Cross-References
+- ✅ Link between related documentation
+- ✅ Reference cursor rules in documentation
+- ✅ Reference documentation in cursor rules
+
+## README.md
+
+### Structure
+- ✅ Project overview
+- ✅ Quick start guide
+- ✅ Features list
+- ✅ Installation instructions
+- ✅ Usage examples
+- ✅ Links to detailed documentation
+
+## API Documentation
+
+### Swagger/OpenAPI
+- ✅ Keep Swagger comments up to date
+- ✅ Include all endpoints
+- ✅ Provide examples
+- ✅ Document error responses
+- ✅ Keep schemas in sync with types
+
+### Endpoints Documentation
+- ✅ Document in `docs/endpoints.md`
+- ✅ Include request/response examples
+- ✅ Document error codes
+- ✅ Document query parameters
+
+## Architecture Documentation
+
+### Rules
+- ✅ Document high-level architecture
+- ✅ Document component responsibilities
+- ✅ Document data flows
+- ✅ Document external integrations
+- ✅ Keep diagrams up to date
+
+## Maintenance
+
+### Regular Updates
+- ✅ Review documentation with each release
+- ✅ Update examples when code changes
+- ✅ Remove outdated information
+- ✅ Add new sections as needed
+
+### Version Control
+- ✅ Commit documentation changes with code changes
+- ✅ Document breaking changes in CHANGELOG
+- ✅ Keep documentation versioned with code

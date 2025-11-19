@@ -1,0 +1,191 @@
+---
+alwaysApply: true
+---
+
+# Code Conventions
+
+## TypeScript
+
+### Typing
+- ✅ **Always explicit typing** for parameters and returns
+- ✅ **Never use `any`** - use `unknown` if absolutely necessary
+- ✅ **Complex types** always in `src/types/`
+- ✅ **Exported types** with descriptive names
+
+### Imports
+- ✅ **Always use path aliases** (`@config/`, `@services/`, etc.)
+- ❌ **Never use relative imports** (`../../../`)
+- ✅ **Import order**:
+  1. Node.js built-ins
+  2. External libraries
+  3. Path aliases (config first)
+  4. Types
+
+**Example:**
+```typescript
+import express from 'express';
+import { logger } from '@utils/logger';
+import '@config/env.config';
+import type { ProcessCsvRequest } from '@/types/orchestrator.types';
+```
+
+### Naming
+- **Files**: camelCase (`orchestrator.controller.ts`)
+- **Classes**: PascalCase (`CsvProcessorService`)
+- **Functions/Variables**: camelCase (`processAndSave`)
+- **Constants**: UPPER_SNAKE_CASE (`FILE_STORAGE_API_URL`)
+- **Types/Interfaces**: PascalCase (`ProcessCsvRequest`)
+- **Test Files**: `*.test.ts` (not `.spec.ts`)
+
+## Controllers
+
+### Rules
+- ✅ Validate input with express-validator
+- ✅ Delegate to services for business logic
+- ✅ Format responses
+- ✅ Use `next(error)` for error handling
+- ✅ Always use async/await with try/catch
+
+**Example:**
+```typescript
+export const processCsv = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: 'Validation error', details: errors.array() });
+      return;
+    }
+    
+    const result = await csvProcessorService.processAndSave(fileId);
+    res.json(result);
+  } catch (error) {
+    next(error as Error);
+  }
+};
+```
+
+## Services
+
+### Rules
+- ✅ Export as singleton instances
+- ✅ All business logic here
+- ✅ Handle external service errors
+- ✅ Log important operations
+- ✅ Use dependency injection for testing
+
+**Example:**
+```typescript
+export class CsvProcessorService {
+  async processAndSave(fileId: string): Promise<{ recordsProcessed: number; success: boolean }> {
+    // Business logic
+  }
+}
+
+export const csvProcessorService = new CsvProcessorService();
+```
+
+## Types
+
+### Rules
+- ✅ All public types in `src/types/`
+- ✅ Grouped by domain (e.g., `orchestrator.types.ts`)
+- ✅ No inline types in public functions
+- ✅ Use `type` for aliases, `interface` for extensible objects
+
+## Validation
+
+### Rules
+- ✅ Always validate all user input
+- ✅ Use express-validator in controllers
+- ✅ Never trust client-side validation
+- ✅ Return clear error messages (400 Bad Request)
+
+### Common Validations
+
+**fileId:**
+```typescript
+body('fileId')
+  .notEmpty()
+  .withMessage('fileId is required')
+  .isString()
+  .withMessage('fileId must be a string')
+```
+
+**Optional query params:**
+```typescript
+query('symbol')
+  .optional()
+  .isString()
+  .withMessage('symbol must be a string')
+```
+
+## Error Handling
+
+### Rules
+- ✅ Always use try/catch in async functions
+- ✅ Always delegate errors to middleware with `next(error)`
+- ✅ Never catch and silence errors without logging
+- ✅ Log errors with sufficient context
+
+**Example:**
+```typescript
+try {
+  const result = await service.doSomething();
+  res.json(result);
+} catch (error) {
+  logger.error('Error in doSomething', { error: (error as Error).message });
+  next(error as Error);
+}
+```
+
+## Logging
+
+### Rules
+- ✅ Use structured logger (Winston)
+- ✅ Log important requests
+- ✅ Log errors with context
+- ✅ Never log sensitive information (API keys, passwords)
+
+**Example:**
+```typescript
+logger.info('Processing CSV request', { fileId });
+logger.error('Error fetching CSV file', { fileId, error: err.message });
+```
+
+## HTTP Client
+
+### Rules
+- ✅ Use `IHttpClient` interface, never axios directly
+- ✅ Create instances with `createHttpClient()`
+- ✅ Configure baseURL and timeout in services
+- ✅ Handle HTTP errors appropriately
+
+**Example:**
+```typescript
+const client = createHttpClient(config.baseURL, config.timeout);
+const response = await client.request<T>({ method: 'GET', url: '/endpoint' });
+```
+
+## Comments and Documentation
+
+### JSDoc
+- ✅ Document public functions with JSDoc
+- ✅ Document parameters and returns
+- ✅ Use `@swagger` for API documentation
+
+**Example:**
+```typescript
+/**
+ * Processes a CSV file from file-storage-api and saves to binance-db-api
+ * @param fileId ID of the CSV file to process
+ * @returns Processing result with record count
+ */
+async processAndSave(fileId: string): Promise<{ recordsProcessed: number; success: boolean }> {
+  // ...
+}
+```
+
+### Swagger
+- ✅ Document all endpoints with Swagger
+- ✅ Include request/response examples
+- ✅ Specify error codes

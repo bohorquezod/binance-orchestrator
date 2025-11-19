@@ -1,0 +1,201 @@
+---
+description: When creating or modifying services, integrating with external APIs, or handling service-to-service communication
+alwaysApply: false
+---
+
+# Service Layer Standards
+
+## Service Structure
+
+### Service Class Pattern
+- ✅ Export class for dependency injection
+- ✅ Export singleton instance for use
+- ✅ Accept custom HTTP client in constructor for testing
+
+**Example:**
+```typescript
+export class FileStorageService {
+  private client: IHttpClient;
+
+  constructor(customClient?: IHttpClient) {
+    const config = servicesConfig.fileStorageApi;
+    this.client = customClient || createHttpClient(config.baseURL, config.timeout);
+  }
+
+  async getCsvFile(fileId: string): Promise<string> {
+    // Implementation
+  }
+}
+
+export const fileStorageService = new FileStorageService();
+```
+
+## External Service Integration
+
+### Configuration
+- ✅ Always use `servicesConfig` from `@config/services.config`
+- ✅ Never hardcode service URLs
+- ✅ Use environment variables for configuration
+
+### HTTP Client Usage
+- ✅ Always use `IHttpClient` interface
+- ✅ Create client with baseURL and timeout from config
+- ✅ Handle HTTP errors appropriately
+- ✅ Log service calls
+
+**Example:**
+```typescript
+const config = servicesConfig.fileStorageApi;
+this.client = createHttpClient(config.baseURL, config.timeout);
+
+try {
+  const response = await this.client.request<string>({
+    method: 'GET',
+    url: `/api/files/${fileId}`,
+  });
+  return response.data;
+} catch (error) {
+  const httpError = error as HttpClientError;
+  if (httpError.isHttpError && httpError.status === 404) {
+    throw new Error(`File not found: ${fileId}`);
+  }
+  throw new Error(`Failed to fetch CSV file: ${httpError.message}`);
+}
+```
+
+## Error Handling
+
+### Rules
+- ✅ Always catch HTTP errors
+- ✅ Transform to descriptive errors
+- ✅ Log errors with context
+- ✅ Re-throw with meaningful messages
+
+### Error Transformation
+```typescript
+catch (error) {
+  const httpError = error as HttpClientError;
+  if (httpError.isHttpError && httpError.status === 404) {
+    throw new Error(`File not found: ${fileId}`);
+  }
+  logger.error('Error fetching CSV file', { fileId, error: httpError.message });
+  throw new Error(`Failed to fetch CSV file: ${httpError.message}`);
+}
+```
+
+## Service Methods
+
+### Naming
+- ✅ Use descriptive method names
+- ✅ Use async/await
+- ✅ Return typed promises
+- ✅ Document with JSDoc
+
+### Method Structure
+```typescript
+/**
+ * Description of what the method does
+ * @param paramName Description of parameter
+ * @returns Description of return value
+ */
+async methodName(param: Type): Promise<ReturnType> {
+  try {
+    logger.info('Operation description', { param });
+    
+    // Implementation
+    
+    logger.info('Operation completed', { result });
+    return result;
+  } catch (error) {
+    logger.error('Operation failed', { param, error: (error as Error).message });
+    throw new Error(`Operation failed: ${error.message}`);
+  }
+}
+```
+
+## Orchestration Services
+
+### Rules
+- ✅ Orchestrate multiple services when needed
+- ✅ Handle partial failures gracefully
+- ✅ Log each step of orchestration
+- ✅ Return comprehensive results
+
+**Example (CsvProcessorService):**
+```typescript
+async processAndSave(fileId: string): Promise<{ recordsProcessed: number; success: boolean }> {
+  try {
+    logger.info('Starting CSV processing flow', { fileId });
+
+    // Step 1: Get CSV
+    const csvContent = await fileStorageService.getCsvFile(fileId);
+    logger.info('Retrieved CSV file', { fileId });
+
+    // Step 2: Parse
+    const parsedData = await this.parseCsv(csvContent);
+    logger.info('Parsed CSV', { fileId, rowCount: parsedData.rows.length });
+
+    // Step 3: Transform
+    const transformedData = await this.transformToDbFormat(parsedData);
+    logger.info('Transformed CSV data', { fileId, recordCount: transformedData.length });
+
+    // Step 4: Save
+    await binanceDbService.saveBulkData(transformedData);
+    logger.info('Saved CSV data to database', { fileId, recordCount: transformedData.length });
+
+    return { recordsProcessed: transformedData.length, success: true };
+  } catch (error) {
+    logger.error('Error in CSV processing flow', { fileId, error: (error as Error).message });
+    throw new Error(`Failed to process CSV: ${error.message}`);
+  }
+}
+```
+
+## Data Transformation
+
+### Rules
+- ✅ Separate transformation logic in dedicated methods
+- ✅ Document transformation rules
+- ✅ Handle edge cases
+- ✅ Preserve data integrity
+
+**Example:**
+```typescript
+async transformToDbFormat(csvData: ParsedCsvData): Promise<Record<string, unknown>[]> {
+  return csvData.rows.map((row) => {
+    const record: Record<string, unknown> = {};
+    
+    // Normalize column names
+    for (const [key, value] of Object.entries(row)) {
+      const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
+      record[normalizedKey] = value;
+    }
+
+    // Add metadata
+    record.processed_at = new Date().toISOString();
+    record.source = 'csv_import';
+
+    return record;
+  });
+}
+```
+
+## Testing Services
+
+### Rules
+- ✅ Services should be easily testable
+- ✅ Accept dependencies in constructor
+- ✅ Mock external HTTP clients in tests
+- ✅ Test error scenarios
+
+### Testability
+```typescript
+// Service accepts custom client for testing
+constructor(customClient?: IHttpClient) {
+  this.client = customClient || createHttpClient(config.baseURL, config.timeout);
+}
+
+// In tests
+const mockClient = new MockHttpClient();
+const service = new FileStorageService(mockClient);
+```

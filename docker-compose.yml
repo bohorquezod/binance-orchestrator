@@ -1,0 +1,46 @@
+services:
+  binance-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: binance-orchestrator
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - FILE_STORAGE_API_URL=${FILE_STORAGE_API_URL:-http://file-storage-api:3000}
+      - BINANCE_DB_API_URL=${BINANCE_DB_API_URL:-http://binance-db-api:3000}
+      - BINANCE_PROXY_URL=${BINANCE_PROXY_URL:-http://binance-proxy:3000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - TRAEFIK_PREFIX=${TRAEFIK_PREFIX:-/binance-orchestrator}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.binance-orchestrator.rule=Host(`${DOMAIN:-api.borasta.sytes.net}`) && PathPrefix(`/binance-orchestrator`)
+      - traefik.http.routers.binance-orchestrator.entrypoints=web
+      - traefik.http.routers.binance-orchestrator.tls=false
+      - traefik.http.routers.binance-orchestrator.middlewares=binance-orchestrator-strip,binance-orchestrator-prefix@docker
+      - traefik.http.middlewares.binance-orchestrator-strip.stripprefix.prefixes=/binance-orchestrator
+      - traefik.http.middlewares.binance-orchestrator-prefix.headers.customrequestheaders.X-Forwarded-Prefix=/binance-orchestrator
+      - traefik.http.services.binance-orchestrator.loadbalancer.server.port=3000
+    networks:
+      - app-network
+      - proxy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  app-network:
+    name: app-network
+    driver: bridge
+  proxy:
+    external: true
+

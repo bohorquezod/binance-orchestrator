@@ -1,0 +1,176 @@
+---
+description: When writing tests, setting up test infrastructure, or discussing testing strategies
+alwaysApply: false
+---
+
+# Testing Standards
+
+## Test Structure
+
+### File Organization
+- ✅ Unit tests in `tests/unit/`
+- ✅ Integration tests in `tests/integration/`
+- ✅ Mocks in `tests/mocks/`
+- ✅ Test files: `*.test.ts` (not `.spec.ts`)
+
+### Test File Structure
+```typescript
+import { Service } from '@services/service';
+
+describe('Service', () => {
+  let service: Service;
+
+  beforeEach(() => {
+    service = new Service();
+    jest.clearAllMocks();
+  });
+
+  describe('methodName', () => {
+    it('should do something', async () => {
+      // Arrange
+      const input = 'test';
+      
+      // Act
+      const result = await service.methodName(input);
+      
+      // Assert
+      expect(result).toBeDefined();
+    });
+
+    it('should handle errors', async () => {
+      // Test error scenario
+    });
+  });
+});
+```
+
+## Unit Tests
+
+### Rules
+- ✅ Mock all external dependencies
+- ✅ Test one thing per test
+- ✅ Use descriptive test names
+- ✅ Test both success and error cases
+- ✅ Test edge cases
+
+### Mocking External Services
+```typescript
+jest.mock('@services/file-storage.service', () => ({
+  fileStorageService: {
+    getCsvFile: jest.fn(),
+  },
+}));
+
+// In test
+(fileStorageService.getCsvFile as jest.Mock).mockResolvedValue('csv,content');
+```
+
+### Mocking HTTP Client
+```typescript
+import { MockHttpClient } from '@tests/mocks/http-client.mock';
+
+const mockClient = new MockHttpClient();
+mockClient.setResponse('GET /endpoint', {
+  data: { result: 'test' },
+  status: 200,
+  statusText: 'OK',
+  headers: {},
+});
+
+const service = new Service(mockClient);
+```
+
+## Integration Tests
+
+### Rules
+- ✅ Use `RUN_INTEGRATION_TESTS` flag
+- ✅ Test complete flows
+- ✅ Use real services (or test doubles)
+- ✅ Clean up after tests
+
+### Integration Test Example
+```typescript
+describe('CSV Processing Integration', () => {
+  beforeAll(() => {
+    if (!process.env.RUN_INTEGRATION_TESTS) {
+      return;
+    }
+  });
+
+  it('should process CSV end-to-end', async () => {
+    const response = await request(app)
+      .post('/api/v1/orchestrator/process-csv')
+      .send({ fileId: 'test-file-id' })
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+  });
+});
+```
+
+## Test Coverage
+
+### Targets
+- ✅ Branches: >80%
+- ✅ Functions: >80%
+- ✅ Lines: >80%
+- ✅ Statements: >80%
+
+### Running Coverage
+```bash
+npm run test:coverage
+```
+
+## Best Practices
+
+### ✅ DO
+- ✅ Write tests before or alongside code
+- ✅ Use descriptive test names
+- ✅ One assertion per test (when possible)
+- ✅ Mock external dependencies
+- ✅ Clean up mocks between tests
+- ✅ Test error cases
+- ✅ Test edge cases
+
+### ❌ DON'T
+- ❌ Don't test implementation, test behavior
+- ❌ Don't make tests dependent on each other
+- ❌ Don't use real production data
+- ❌ Don't make tests unnecessarily slow
+- ❌ Don't ignore failing tests
+
+## Test Data
+
+### Rules
+- ✅ Use test fixtures
+- ✅ Create test data in tests
+- ✅ Never use real production data
+- ✅ Clean up test data after tests
+
+### Test Fixtures
+```typescript
+// tests/fixtures/csv-data.ts
+export const sampleCsv = 'symbol,price\nBTCUSDT,45000';
+export const sampleParsedData = {
+  headers: ['symbol', 'price'],
+  rows: [{ symbol: 'BTCUSDT', price: 45000 }],
+};
+```
+
+## Async Testing
+
+### Rules
+- ✅ Always use async/await in async tests
+- ✅ Wait for promises to resolve
+- ✅ Handle promise rejections
+
+**Example:**
+```typescript
+it('should handle async operations', async () => {
+  await expect(service.asyncMethod()).resolves.toBeDefined();
+});
+
+it('should handle async errors', async () => {
+  await expect(service.asyncMethod()).rejects.toThrow('Error message');
+});
+```

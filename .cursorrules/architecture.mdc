@@ -1,0 +1,144 @@
+---
+description: When creating new modules, adding features, refactoring code structure, or discussing system design
+alwaysApply: false
+---
+
+# Architecture Maintenance Standards
+
+## Project Structure
+
+### Folder Structure (ALWAYS MAINTAIN)
+
+```
+binance-orchestrator/
+├── src/
+│   ├── config/          # Configurations (env, services, swagger)
+│   ├── controllers/     # Endpoint controllers
+│   ├── services/        # Business logic (orchestration services)
+│   ├── middleware/      # Middlewares (errors)
+│   ├── types/           # TypeScript types (NO interfaces in controllers/services)
+│   ├── utils/           # Reusable utilities (logger, http-client)
+│   └── app.ts           # Express configuration (NO business logic)
+├── docs/                # Documentation
+├── .cursorrules/        # Cursor rules organized by category
+├── logs/                # Logs (gitkeep present, .log files ignored)
+└── dist/                # Build output (generated, ignored in git)
+```
+
+### Structure Rules
+- ✅ Each functional domain has its own controller
+- ✅ TypeScript types ONLY in `src/types/`
+- ✅ Services in `src/services/` (business logic)
+- ✅ Middlewares in `src/middleware/`
+- ✅ Reusable utils in `src/utils/`
+- ✅ Configuration in `src/config/`
+- ✅ Additional documentation in `docs/`
+
+### Structure Prohibitions
+- ❌ DO NOT create loose files in `src/`
+- ❌ DO NOT mix business logic in controllers
+- ❌ DO NOT put inline types, always in `types/`
+- ❌ DO NOT create folders outside the defined structure
+- ❌ DO NOT mix concerns (e.g., validation in services)
+- ❌ DO NOT put business code in `app.ts`
+
+## Controller Responsibilities
+
+### ✅ What Controllers DO
+- Receive HTTP requests
+- Validate input with express-validator
+- Call services for business logic
+- Format HTTP responses
+- Handle errors and delegate to middleware
+
+### ❌ What Controllers DON'T DO
+- Business logic
+- Direct HTTP calls to external services
+- Data transformation (except formatting for response)
+- Complex calculations
+
+## Service Responsibilities
+
+### ✅ What Services DO
+- Business logic and orchestration
+- Communication with external services
+- Data transformation
+- Error handling for external services
+
+### ❌ What Services DON'T DO
+- HTTP request/response handling
+- Input validation (that's controllers)
+- Direct database access (use binance-db-api)
+
+## External Service Integration
+
+### Rules
+- ✅ Always use services config from `@config/services.config`
+- ✅ Always use HTTP client abstraction (`IHttpClient`)
+- ✅ Always handle errors from external services
+- ✅ Always log external service calls
+- ✅ Always set appropriate timeouts
+
+### Service Configuration
+- URLs and timeouts in `src/config/services.config.ts`
+- Never hardcode service URLs
+- Use environment variables for configuration
+
+## Error Handling
+
+### Rules
+- ✅ Always use try/catch in async functions
+- ✅ Always delegate errors to middleware with `next(error)`
+- ✅ Always log errors with context
+- ✅ Never swallow errors silently
+
+### Error Middleware
+- Centralized in `src/middleware/error.middleware.ts`
+- Maps errors to appropriate HTTP status codes
+- Does not expose stack traces in production
+
+## Logging
+
+### Rules
+- ✅ Use structured logging with Winston
+- ✅ Log important operations (service calls, processing steps)
+- ✅ Log errors with context
+- ✅ Never log sensitive information (API keys, passwords)
+
+### Log Levels
+- `error`: Errors requiring attention
+- `warn`: Warnings
+- `info`: General information (default)
+- `debug`: Detailed debugging information
+
+## HTTP Client Abstraction
+
+### Rules
+- ✅ Always use `IHttpClient` interface, never axios directly
+- ✅ Create instances with `createHttpClient()`
+- ✅ Configure baseURL and timeout in services
+- ✅ Handle HTTP errors appropriately
+
+### Implementation
+- Current: `AxiosHttpClient` using axios
+- Can be changed by modifying `createHttpClient()` factory
+
+## Configuration
+
+### Environment Variables
+- Loaded automatically via `@config/env.config`
+- Must be imported FIRST in `app.ts`
+- Never access `process.env` directly (use config files)
+
+### Service Configuration
+- Centralized in `src/config/services.config.ts`
+- URLs and timeouts for all external services
+- Easy to update and maintain
+
+## Update this file
+
+If you need to add a new folder or change the structure:
+1. Update this file
+2. Update `docs/folder-structure.md`
+3. Update `docs/architecture.md` if needed
+4. Ensure consistency across all documentation
