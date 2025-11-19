@@ -1,0 +1,12 @@
+{
+  "name": "binance-db-api",
+  "description": "Servidor MCP que consume la especificación OpenAPI directamente desde binance-db-api.",
+  "command": "node",
+  "args": ["./binance-db-api-mcp/dist/server.js"],
+  "env": {
+    "BINANCE_DB_API_URL": "http://api.borasta.sytes.net/binance-db-api/api",
+    "OPENAPI_SPEC_URL": "http://api.borasta.sytes.net/binance-db-api/api-docs.json",
+    "DB_SCHEMA_URL": "http://api.borasta.sytes.net/binance-db-api/api/db/schema"
+  }
+}
+
