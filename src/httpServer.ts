@@ -1,11 +1,11 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { HttpConfig } from './config.js';
 import { normalizeForComparison } from './config.js';
 
-export async function startHttpServer(server: McpServer, httpConfig: HttpConfig) {
+export async function startHttpServer(server: Server, httpConfig: HttpConfig) {
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     allowedOrigins: ['*'],

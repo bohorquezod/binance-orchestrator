@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { loadConfig } from './config.js';
 import { ApiClient } from './apiClient.js';
 import { createMcpServer } from './mcpServer.js';
 import { startHttpServer } from './httpServer.js';
 
-async function startStdioServer(server: McpServer, apiUrl: string) {
+async function startStdioServer(server: any, apiUrl: string) {
   const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -21,6 +20,7 @@ async function main() {
 
   if (config.transportMode === 'stdio') {
     await startStdioServer(server, config.api.baseUrl);
+    console.error(`OpenAPI Spec URL: ${config.api.openApiSpecUrl}`);
     return;
   }
 

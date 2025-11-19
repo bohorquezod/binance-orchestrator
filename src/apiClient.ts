@@ -62,8 +62,8 @@ export interface DatabaseSchemaDoc {
   generatedAt: string;
 }
 
-const CACHE_TTL = 30 * 1000; // 30 segundos (reducido para debugging)
-const SCHEMA_CACHE_TTL = 30 * 1000; // 30 segundos (reducido para debugging)
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const SCHEMA_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export class ApiClient {
   private cachedSpec: OpenAPISpec | null = null;

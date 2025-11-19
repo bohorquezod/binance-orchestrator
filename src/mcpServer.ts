@@ -1,10 +1,9 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
-  type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import type { ApiClient, OpenAPISpec, DatabaseSchemaDoc, TableDoc } from './apiClient.js';
 
@@ -237,8 +236,8 @@ function buildMermaidFromSchema(doc: DatabaseSchemaDoc): string {
   return lines.join('\n');
 }
 
-export function createMcpServer(apiClient: ApiClient): McpServer {
-  const mcpServer = new McpServer(
+export function createMcpServer(apiClient: ApiClient): Server {
+  const server = new Server(
     {
       name: 'binance-db-api-mcp',
       version: '1.0.0',
@@ -250,7 +249,6 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
       },
     },
   );
-  const server = mcpServer.server;
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     try {
@@ -736,6 +734,6 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
     }
   });
 
-  return mcpServer;
+  return server;
 }
 
