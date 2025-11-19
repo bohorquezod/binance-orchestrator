@@ -12,7 +12,7 @@ services:
       - DB_SCHEMA_URL=${DB_SCHEMA_URL:-http://binance-db-api:3000/db/schema}
       - BINANCE_DB_API_TRANSPORT=${BINANCE_DB_API_TRANSPORT:-http}
       - BINANCE_DB_API_HTTP_HOST=${BINANCE_DB_API_HTTP_HOST:-0.0.0.0}
-      - BINANCE_DB_API_HTTP_PORT=${BINANCE_DB_API_HTTP_PORT:-3000}
+      - BINANCE_DB_API_HTTP_PORT=${BINANCE_DB_API_HTTP_PORT:-8080}
       - BINANCE_DB_API_HTTP_PATH=${BINANCE_DB_API_HTTP_PATH:-/}
       - BINANCE_DB_API_HTTP_HEALTH_PATH=${BINANCE_DB_API_HTTP_HEALTH_PATH:-/health}
     labels:
@@ -24,7 +24,7 @@ services:
       - traefik.http.routers.binance-db-api-mcp.middlewares=binance-db-api-mcp-strip@docker
       - traefik.http.routers.binance-db-api-mcp.service=binance-db-api-mcp
       - traefik.http.middlewares.binance-db-api-mcp-strip.stripprefix.prefixes=/binance-db-api
-      - traefik.http.services.binance-db-api-mcp.loadbalancer.server.port=3000
+      - traefik.http.services.binance-db-api-mcp.loadbalancer.server.port=8080
       - traefik.http.services.binance-db-api-mcp.loadbalancer.server.scheme=http
     healthcheck:
       test:
@@ -35,7 +35,7 @@ services:
           "--tries=1",
           "-O",
           "/dev/null",
-          "http://127.0.0.1:${BINANCE_DB_API_HTTP_PORT:-3000}${BINANCE_DB_API_HTTP_HEALTH_PATH:-/health}",
+          "http://127.0.0.1:${BINANCE_DB_API_HTTP_PORT:-8080}${BINANCE_DB_API_HTTP_HEALTH_PATH:-/health}",
         ]
       interval: 30s
       timeout: 3s
