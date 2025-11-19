@@ -69,7 +69,7 @@ export class CsvProcessorService {
 
       // Transform each row to match the expected database schema
       // This is a generic transformation - adjust based on actual requirements
-      const transformed = csvData.rows.map((row, index) => {
+      const transformed = csvData.rows.map((row) => {
         const record: Record<string, unknown> = {};
         
         // Map CSV columns to database fields
