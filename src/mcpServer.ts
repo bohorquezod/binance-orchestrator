@@ -528,16 +528,23 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
             throw new Error("Debes proporcionar el parámetro 'query'.");
           }
 
-          const spec = await apiClient.fetchOpenAPISpec();
-          const results = searchEndpoints(spec, query);
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(results, null, 2),
-              },
-            ],
-          };
+          try {
+            const spec = await apiClient.fetchOpenAPISpec();
+            console.error(`[MCP Tool] search-endpoint: query="${query}", spec.paths=${spec.paths ? Object.keys(spec.paths).length : 'null'}`);
+            const results = searchEndpoints(spec, query);
+            console.error(`[MCP Tool] search-endpoint: found ${results.length} results`);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(results, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            console.error(`[MCP Tool] search-endpoint error:`, error);
+            throw error;
+          }
         }
 
         case 'get-endpoint-details': {
@@ -547,20 +554,28 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
             throw new Error("Debes proporcionar 'path' y 'method'.");
           }
 
-          const spec = await apiClient.fetchOpenAPISpec();
-          const endpoint = getEndpointDetails(spec, path, method);
-          if (!endpoint) {
-            throw new Error(`No se encontró el endpoint ${method} ${path}.`);
+          try {
+            const spec = await apiClient.fetchOpenAPISpec();
+            console.error(`[MCP Tool] get-endpoint-details: path="${path}", method="${method}", spec.paths=${spec.paths ? Object.keys(spec.paths).length : 'null'}`);
+            const endpoint = getEndpointDetails(spec, path, method);
+            if (!endpoint) {
+              console.error(`[MCP Tool] get-endpoint-details: endpoint not found in spec`);
+              console.error(`[MCP Tool] Available paths:`, Object.keys(spec.paths || {}));
+              throw new Error(`No se encontró el endpoint ${method} ${path}.`);
+            }
+            console.error(`[MCP Tool] get-endpoint-details: found endpoint`);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(endpoint, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            console.error(`[MCP Tool] get-endpoint-details error:`, error);
+            throw error;
           }
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(endpoint, null, 2),
-              },
-            ],
-          };
         }
 
         case 'get-endpoint-code': {
@@ -593,16 +608,23 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
             throw new Error("Debes proporcionar 'tag'.");
           }
 
-          const spec = await apiClient.fetchOpenAPISpec();
-          const results = listEndpointsByTag(spec, tag);
-          return {
-            content: [
-              {
-                type: 'text',
-                text: JSON.stringify(results, null, 2),
-              },
-            ],
-          };
+          try {
+            const spec = await apiClient.fetchOpenAPISpec();
+            console.error(`[MCP Tool] list-endpoints-by-tag: tag="${tag}", spec.paths=${spec.paths ? Object.keys(spec.paths).length : 'null'}`);
+            const results = listEndpointsByTag(spec, tag);
+            console.error(`[MCP Tool] list-endpoints-by-tag: found ${results.length} results`);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(results, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            console.error(`[MCP Tool] list-endpoints-by-tag error:`, error);
+            throw error;
+          }
         }
 
         case 'list-tables': {
