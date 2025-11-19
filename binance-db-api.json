@@ -4,9 +4,9 @@
   "command": "node",
   "args": ["./binance-db-api-mcp/dist/server.js"],
   "env": {
-    "BINANCE_DB_API_URL": "http://localhost:6300/api",
-    "OPENAPI_SPEC_URL": "http://localhost:6300/api-docs.json",
-    "DB_SCHEMA_URL": "http://localhost:6300/db/schema"
+    "BINANCE_DB_API_URL": "http://api.borasta.sytes.net/binance-db-api/api",
+    "OPENAPI_SPEC_URL": "http://api.borasta.sytes.net/binance-db-api/api-docs.json",
+    "DB_SCHEMA_URL": "http://api.borasta.sytes.net/binance-db-api/api/db/schema"
   }
 }
 

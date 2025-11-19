@@ -33,18 +33,39 @@ const DEFAULT_API_BASE = process.env.BINANCE_DB_API_URL || 'http://localhost:300
 function buildDefaultOpenApiSpecUrl(baseUrl: string): string {
   try {
     const url = new URL(baseUrl);
-    return `${url.origin}/api-docs.json`;
+    // Extract the pathname and remove /api if present
+    const pathname = url.pathname.replace(/\/api\/?$/, '');
+    // Construct URL: origin + pathname + /api-docs.json
+    const fullPath = `${pathname}/api-docs.json`.replace(/\/+/g, '/');
+    return `${url.origin}${fullPath}`;
   } catch {
-    return `${baseUrl.replace(/\/$/, '')}/api-docs.json`;
+    // Fallback for non-URL strings
+    const cleanBase = baseUrl.replace(/\/$/, '').replace(/\/api\/?$/, '');
+    return `${cleanBase}/api-docs.json`;
   }
 }
 
 function buildDefaultDbSchemaUrl(baseUrl: string): string {
   try {
     const url = new URL(baseUrl);
-    return `${url.origin}/db/schema`;
+    // Extract the pathname and ensure it ends with /api or add it
+    let pathname = url.pathname;
+    if (!pathname.endsWith('/api')) {
+      // If baseUrl is like /binance-db-api, add /api
+      if (!pathname.includes('/api')) {
+        pathname = pathname.replace(/\/$/, '') + '/api';
+      }
+    }
+    // Construct URL: origin + pathname + /db/schema
+    const fullPath = `${pathname}/db/schema`.replace(/\/+/g, '/');
+    return `${url.origin}${fullPath}`;
   } catch {
-    return `${baseUrl.replace(/\/$/, '')}/db/schema`;
+    // Fallback for non-URL strings
+    let cleanBase = baseUrl.replace(/\/$/, '');
+    if (!cleanBase.includes('/api')) {
+      cleanBase = cleanBase.replace(/\/$/, '') + '/api';
+    }
+    return `${cleanBase}/db/schema`;
   }
 }
 
