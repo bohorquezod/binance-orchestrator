@@ -6,6 +6,8 @@ services:
     image: binance-db-api-mcp:latest
     container_name: binance_db_api_mcp
     restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-.env}
     environment:
       - BINANCE_DB_API_URL=${BINANCE_DB_API_URL:-http://binance-db-api:3000/api}
       - OPENAPI_SPEC_URL=${OPENAPI_SPEC_URL:-http://binance-db-api:3000/api-docs.json}

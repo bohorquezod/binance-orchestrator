@@ -529,11 +529,15 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
           }
 
           try {
-            const spec = await apiClient.fetchOpenAPISpec(false);
+            // Force refresh to ensure we get the latest spec
+            const spec = await apiClient.fetchOpenAPISpec(true);
             const paths = spec.paths ? Object.keys(spec.paths) : [];
-            console.error(`[MCP Tool] search-endpoint: query="${query}", spec.paths=${paths.length} (${paths.slice(0, 3).join(', ')}${paths.length > 3 ? '...' : ''})`);
+            console.error(`[MCP Tool] search-endpoint: query="${query}", spec.paths=${paths.length} (${paths.slice(0, 5).join(', ')})`);
             const results = searchEndpoints(spec, query);
             console.error(`[MCP Tool] search-endpoint: found ${results.length} results for "${query}"`);
+            if (results.length === 0 && paths.length > 0) {
+              console.error(`[MCP Tool] search-endpoint: WARNING - No results but spec has ${paths.length} paths`);
+            }
             return {
               content: [
                 {
@@ -556,8 +560,10 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
           }
 
           try {
-            const spec = await apiClient.fetchOpenAPISpec();
-            console.error(`[MCP Tool] get-endpoint-details: path="${path}", method="${method}", spec.paths=${spec.paths ? Object.keys(spec.paths).length : 'null'}`);
+            // Force refresh to ensure we get the latest spec
+            const spec = await apiClient.fetchOpenAPISpec(true);
+            const paths = spec.paths ? Object.keys(spec.paths) : [];
+            console.error(`[MCP Tool] get-endpoint-details: path="${path}", method="${method}", spec.paths=${paths.length} (${paths.slice(0, 5).join(', ')})`);
             const endpoint = getEndpointDetails(spec, path, method);
             if (!endpoint) {
               console.error(`[MCP Tool] get-endpoint-details: endpoint not found in spec`);
@@ -586,7 +592,8 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
             throw new Error("Debes proporcionar 'path' y 'method'.");
           }
 
-          const spec = await apiClient.fetchOpenAPISpec();
+          // Force refresh to ensure we get the latest spec
+          const spec = await apiClient.fetchOpenAPISpec(true);
           const endpoint = getEndpointDetails(spec, path, method);
           if (!endpoint) {
             throw new Error(`No se encontró el endpoint ${method} ${path}.`);
@@ -610,10 +617,15 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
           }
 
           try {
-            const spec = await apiClient.fetchOpenAPISpec();
-            console.error(`[MCP Tool] list-endpoints-by-tag: tag="${tag}", spec.paths=${spec.paths ? Object.keys(spec.paths).length : 'null'}`);
+            // Force refresh to ensure we get the latest spec
+            const spec = await apiClient.fetchOpenAPISpec(true);
+            const paths = spec.paths ? Object.keys(spec.paths) : [];
+            console.error(`[MCP Tool] list-endpoints-by-tag: tag="${tag}", spec.paths=${paths.length} (${paths.slice(0, 5).join(', ')})`);
             const results = listEndpointsByTag(spec, tag);
             console.error(`[MCP Tool] list-endpoints-by-tag: found ${results.length} results`);
+            if (results.length === 0 && paths.length > 0) {
+              console.error(`[MCP Tool] list-endpoints-by-tag: WARNING - No results but spec has ${paths.length} paths`);
+            }
             return {
               content: [
                 {
