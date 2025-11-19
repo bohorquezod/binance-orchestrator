@@ -62,8 +62,8 @@ export interface DatabaseSchemaDoc {
   generatedAt: string;
 }
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
-const SCHEMA_CACHE_TTL = 60 * 1000; // 1 minuto
+const CACHE_TTL = 30 * 1000; // 30 segundos (reducido para debugging)
+const SCHEMA_CACHE_TTL = 30 * 1000; // 30 segundos (reducido para debugging)
 
 export class ApiClient {
   private cachedSpec: OpenAPISpec | null = null;
@@ -77,16 +77,17 @@ export class ApiClient {
     return this.config.baseUrl;
   }
 
-  async fetchOpenAPISpec(): Promise<OpenAPISpec> {
+  async fetchOpenAPISpec(forceRefresh = false): Promise<OpenAPISpec> {
     const now = Date.now();
 
-    if (this.cachedSpec && now - this.cacheTimestamp < CACHE_TTL) {
+    if (!forceRefresh && this.cachedSpec && now - this.cacheTimestamp < CACHE_TTL) {
+      console.error(`[MCP] Using cached spec (age: ${Math.floor((now - this.cacheTimestamp) / 1000)}s, paths: ${Object.keys(this.cachedSpec.paths || {}).length})`);
       return this.cachedSpec;
     }
 
     try {
       const url = this.config.openApiSpecUrl;
-      console.error(`[MCP] Fetching OpenAPI spec from: ${url}`);
+      console.error(`[MCP] Fetching OpenAPI spec from: ${url} (forceRefresh: ${forceRefresh})`);
       const response = await this.fetchWithTimeout(url);
       if (!response.ok) {
         console.error(`[MCP] Failed to fetch OpenAPI spec: ${response.status} ${response.statusText} from ${url}`);
@@ -97,14 +98,15 @@ export class ApiClient {
 
       this.cachedSpec = (await response.json()) as OpenAPISpec;
       this.cacheTimestamp = now;
-      console.error(`[MCP] Successfully fetched OpenAPI spec from: ${url} (${Object.keys(this.cachedSpec.paths || {}).length} paths)`);
+      const paths = Object.keys(this.cachedSpec.paths || {});
+      console.error(`[MCP] Successfully fetched OpenAPI spec from: ${url} (${paths.length} paths: ${paths.slice(0, 5).join(', ')}${paths.length > 5 ? '...' : ''})`);
       return this.cachedSpec;
     } catch (error) {
       const url = this.config.openApiSpecUrl;
       console.error(`[MCP] Error fetching OpenAPI spec from ${url}:`, error);
       if (this.cachedSpec) {
         console.error(
-          'Fallo al refrescar el OpenAPI spec. Se utiliza la versión en caché.',
+          `Fallo al refrescar el OpenAPI spec. Se utiliza la versión en caché (${Object.keys(this.cachedSpec.paths || {}).length} paths).`,
           error,
         );
         return this.cachedSpec;

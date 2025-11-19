@@ -529,10 +529,11 @@ export function createMcpServer(apiClient: ApiClient): McpServer {
           }
 
           try {
-            const spec = await apiClient.fetchOpenAPISpec();
-            console.error(`[MCP Tool] search-endpoint: query="${query}", spec.paths=${spec.paths ? Object.keys(spec.paths).length : 'null'}`);
+            const spec = await apiClient.fetchOpenAPISpec(false);
+            const paths = spec.paths ? Object.keys(spec.paths) : [];
+            console.error(`[MCP Tool] search-endpoint: query="${query}", spec.paths=${paths.length} (${paths.slice(0, 3).join(', ')}${paths.length > 3 ? '...' : ''})`);
             const results = searchEndpoints(spec, query);
-            console.error(`[MCP Tool] search-endpoint: found ${results.length} results`);
+            console.error(`[MCP Tool] search-endpoint: found ${results.length} results for "${query}"`);
             return {
               content: [
                 {
