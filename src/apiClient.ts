@@ -115,17 +115,23 @@ export class ApiClient {
     }
 
     try {
-      const response = await this.fetchWithTimeout(this.config.dbSchemaUrl);
+      const url = this.config.dbSchemaUrl;
+      console.error(`[MCP] Fetching database schema from: ${url}`);
+      const response = await this.fetchWithTimeout(url);
       if (!response.ok) {
+        console.error(`[MCP] Failed to fetch schema: ${response.status} ${response.statusText} from ${url}`);
         throw new Error(
-          `No se pudo obtener el esquema de base de datos: ${response.status} ${response.statusText}`,
+          `No se pudo obtener el esquema de base de datos: ${response.status} ${response.statusText} (URL: ${url})`,
         );
       }
 
       this.cachedSchemaDoc = (await response.json()) as DatabaseSchemaDoc;
       this.schemaCacheTimestamp = now;
+      console.error(`[MCP] Successfully fetched database schema from: ${url}`);
       return this.cachedSchemaDoc;
     } catch (error) {
+      const url = this.config.dbSchemaUrl;
+      console.error(`[MCP] Error fetching database schema from ${url}:`, error);
       if (this.cachedSchemaDoc) {
         console.error(
           'Fallo al refrescar el esquema de base de datos. Se utiliza la versión en caché.',

@@ -71,10 +71,20 @@ function buildDefaultDbSchemaUrl(baseUrl: string): string {
 
 export function loadConfig(): AppConfig {
   const baseUrl = DEFAULT_API_BASE.replace(/\/$/, '');
+  const openApiSpecUrl = process.env.OPENAPI_SPEC_URL || buildDefaultOpenApiSpecUrl(baseUrl);
+  const dbSchemaUrl = process.env.DB_SCHEMA_URL || buildDefaultDbSchemaUrl(baseUrl);
+  
+  console.error('[MCP Config] BINANCE_DB_API_URL:', process.env.BINANCE_DB_API_URL || 'not set (using default)');
+  console.error('[MCP Config] baseUrl:', baseUrl);
+  console.error('[MCP Config] OPENAPI_SPEC_URL:', process.env.OPENAPI_SPEC_URL || 'not set (using default)');
+  console.error('[MCP Config] openApiSpecUrl:', openApiSpecUrl);
+  console.error('[MCP Config] DB_SCHEMA_URL:', process.env.DB_SCHEMA_URL || 'not set (using default)');
+  console.error('[MCP Config] dbSchemaUrl:', dbSchemaUrl);
+  
   const api: ApiConfig = {
     baseUrl,
-    openApiSpecUrl: process.env.OPENAPI_SPEC_URL || buildDefaultOpenApiSpecUrl(baseUrl),
-    dbSchemaUrl: process.env.DB_SCHEMA_URL || buildDefaultDbSchemaUrl(baseUrl),
+    openApiSpecUrl,
+    dbSchemaUrl,
     timeout: Number(process.env.BINANCE_DB_API_TIMEOUT ?? 30_000),
   };
 
