@@ -231,7 +231,7 @@ export class CsvProcessorService {
         // Update existing record to processing status
         await binanceDbService.updateCsvImport(csvImportId, {
           status: 'processing',
-          errorMessage: null,
+          errorMessage: undefined,
         });
       }
 
@@ -277,7 +277,7 @@ export class CsvProcessorService {
         recordsFailed,
         errorMessage: errors.length > 0 
           ? `Some records failed: ${errors.map(e => `Row ${e.index}: ${e.message}`).join('; ')}`
-          : null,
+          : undefined,
       });
       logger.info('Updated CSV import record', { 
         csvImportId, 
