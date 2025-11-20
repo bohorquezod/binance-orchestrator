@@ -35,7 +35,7 @@ export class BinanceDbService {
         }
       }
 
-      const url = `/api/v1/transactions${queryString.toString() ? `?${queryString.toString()}` : ''}`;
+      const url = `/api/transactions${queryString.toString() ? `?${queryString.toString()}` : ''}`;
       
       const response = await this.client.request<unknown>({
         method: 'GET',
@@ -62,7 +62,7 @@ export class BinanceDbService {
 
       const response = await this.client.request<unknown>({
         method: 'POST',
-        url: '/api/v1/transactions',
+        url: '/api/transactions',
         data,
       });
 
@@ -105,7 +105,7 @@ export class BinanceDbService {
 
       const response = await this.client.request<unknown>({
         method: 'POST',
-        url: '/api/v1/transactions/bulk',
+        url: '/api/transactions/bulk',
         data: payload,
       });
 
@@ -130,7 +130,7 @@ export class BinanceDbService {
 
       const response = await this.client.request<unknown>({
         method: 'PATCH',
-        url: `/api/v1/transactions/${id}`,
+        url: `/api/transactions/${id}`,
         data,
       });
 
