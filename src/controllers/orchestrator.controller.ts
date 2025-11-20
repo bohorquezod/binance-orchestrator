@@ -3,8 +3,9 @@ import { body, query, validationResult } from 'express-validator';
 import { csvProcessorService } from '@services/csv-processor.service';
 import { binanceProxyService } from '@services/binance-proxy.service';
 import { binanceDbService } from '@services/binance-db.service';
+import { binanceSyncService } from '@services/binance-sync.service';
 import { logger } from '@utils/logger';
-import type { ProcessCsvRequest, ProcessCsvResponse, SyncDataResponse, BridgeWebhookRequest, BridgeWebhookResponse } from '@/types/orchestrator.types';
+import type { ProcessCsvRequest, ProcessCsvResponse, SyncDataResponse, BridgeWebhookRequest, BridgeWebhookResponse, SyncTransactionsRequest, SyncTransactionsResponse } from '@/types/orchestrator.types';
 
 /**
  * @swagger
@@ -45,16 +46,20 @@ export const processCsv = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    const { fileId } = req.body as ProcessCsvRequest;
+    const { fileId, appUserId } = req.body as ProcessCsvRequest;
 
-    logger.info('Processing CSV request', { fileId });
+    logger.info('Processing CSV request', { fileId, appUserId });
 
-    const result = await csvProcessorService.processAndSave(fileId);
+    const result = await csvProcessorService.processAndSave(fileId, appUserId);
 
     const response: ProcessCsvResponse = {
       success: result.success,
       message: `Successfully processed ${result.recordsProcessed} records`,
+      csvImportId: result.csvImportId,
       recordsProcessed: result.recordsProcessed,
+      recordsInserted: result.recordsInserted,
+      recordsDuplicated: result.recordsDuplicated,
+      recordsFailed: result.recordsFailed,
     };
 
     res.json(response);
@@ -207,6 +212,96 @@ export const bridgeWebhook = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+/**
+ * @swagger
+ * /api/v1/orchestrator/sync-transactions:
+ *   post:
+ *     summary: Synchronize transactions from Binance API
+ *     description: Syncs deposits or withdrawals from Binance API and saves them to the database
+ *     tags: [Orchestrator]
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [deposit, withdraw]
+ *         description: Type of transaction to sync
+ *       - in: query
+ *         name: appUserId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Application user ID
+ *       - in: query
+ *         name: apiKey
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Binance API key for authentication
+ *       - in: query
+ *         name: startTime
+ *         schema:
+ *           type: integer
+ *         description: Optional start timestamp (forces specific range)
+ *       - in: query
+ *         name: endTime
+ *         schema:
+ *           type: integer
+ *         description: Optional end timestamp (forces specific range)
+ *       - in: query
+ *         name: binanceUserId
+ *         schema:
+ *           type: string
+ *         description: Binance user ID (required for syncing)
+ *     responses:
+ *       200:
+ *         description: Transactions synchronized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SyncTransactionsResponse'
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Internal server error
+ */
+export const syncTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: 'Validation error', details: errors.array() });
+      return;
+    }
+
+    const { type, appUserId, apiKey, startTime, endTime, binanceUserId } = req.query as SyncTransactionsRequest;
+
+    logger.info('Syncing transactions', { type, appUserId, startTime, endTime });
+
+    const options = {
+      appUserId,
+      apiKey,
+      startTime: startTime ? parseInt(startTime, 10) : undefined,
+      endTime: endTime ? parseInt(endTime, 10) : undefined,
+      binanceUserId: binanceUserId || undefined,
+    };
+
+    const result = type === 'deposit'
+      ? await binanceSyncService.syncDeposits(options)
+      : await binanceSyncService.syncWithdrawals(options);
+
+    const response: SyncTransactionsResponse = {
+      success: result.status === 'success',
+      message: `Synchronized ${result.recordsInserted} transactions`,
+      result,
+    };
+
+    res.json(response);
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
 // Validation middleware for process-csv endpoint
 export const validateProcessCsv = [
   body('fileId')
@@ -214,6 +309,11 @@ export const validateProcessCsv = [
     .withMessage('fileId is required')
     .isString()
     .withMessage('fileId must be a string'),
+  body('appUserId')
+    .notEmpty()
+    .withMessage('appUserId is required')
+    .isString()
+    .withMessage('appUserId must be a string'),
 ];
 
 // Validation middleware for sync-data endpoint (optional query params)
@@ -226,5 +326,34 @@ export const validateSyncData = [
     .optional()
     .isIn(['ticker', 'price', 'klines'])
     .withMessage('type must be one of: ticker, price, klines'),
+];
+
+// Validation middleware for sync-transactions endpoint
+export const validateSyncTransactions = [
+  query('type')
+    .isIn(['deposit', 'withdraw'])
+    .withMessage('type must be deposit or withdraw'),
+  query('appUserId')
+    .notEmpty()
+    .withMessage('appUserId is required')
+    .isString()
+    .withMessage('appUserId must be a string'),
+  query('apiKey')
+    .notEmpty()
+    .withMessage('apiKey is required')
+    .isString()
+    .withMessage('apiKey must be a string'),
+  query('startTime')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('startTime must be a valid timestamp'),
+  query('endTime')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('endTime must be a valid timestamp'),
+  query('binanceUserId')
+    .optional()
+    .isString()
+    .withMessage('binanceUserId must be a string'),
 ];
 

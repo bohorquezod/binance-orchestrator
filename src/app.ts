@@ -308,6 +308,12 @@ app.get(
 );
 
 app.post(
+  '/api/v1/orchestrator/sync-transactions',
+  orchestratorController.validateSyncTransactions,
+  orchestratorController.syncTransactions
+);
+
+app.post(
   '/api/v1/orchestrator/bridge-webhook',
   orchestratorController.bridgeWebhook
 );

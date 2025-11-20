@@ -138,6 +138,116 @@ export class BinanceProxyService {
     }
     return this.getMarketData(endpoint, params);
   }
+
+  /**
+   * Gets deposit history from binance-proxy
+   * @param params Deposit history parameters
+   * @returns Deposit history data
+   */
+  async getDepositHistory(params: {
+    startTime?: number;
+    endTime?: number;
+    limit?: number;
+    coin?: string;
+    status?: number;
+    apiKey?: string;
+  }): Promise<unknown> {
+    try {
+      logger.info('Fetching deposit history from binance-proxy', { params: { ...params, apiKey: params.apiKey ? '***' : undefined } });
+
+      const queryString = new URLSearchParams();
+      if (params.startTime !== undefined) {
+        queryString.append('startTime', String(params.startTime));
+      }
+      if (params.endTime !== undefined) {
+        queryString.append('endTime', String(params.endTime));
+      }
+      if (params.limit !== undefined) {
+        queryString.append('limit', String(params.limit));
+      }
+      if (params.coin) {
+        queryString.append('coin', params.coin);
+      }
+      if (params.status !== undefined) {
+        queryString.append('status', String(params.status));
+      }
+
+      const url = `/api/v1/wallet/deposit/history${queryString.toString() ? `?${queryString.toString()}` : ''}`;
+
+      const headers: Record<string, string> = {};
+      if (params.apiKey) {
+        headers['X-API-Key'] = params.apiKey;
+      }
+
+      const response = await this.client.request<unknown>({
+        method: 'GET',
+        url,
+        headers,
+      });
+
+      logger.info('Successfully fetched deposit history from binance-proxy');
+      return response.data;
+    } catch (error) {
+      const httpError = error as HttpClientError;
+      logger.error('Error fetching deposit history from binance-proxy', { error: httpError.message });
+      throw new Error(`Failed to fetch deposit history: ${httpError.message}`);
+    }
+  }
+
+  /**
+   * Gets withdrawal history from binance-proxy
+   * @param params Withdrawal history parameters
+   * @returns Withdrawal history data
+   */
+  async getWithdrawHistory(params: {
+    startTime?: number;
+    endTime?: number;
+    limit?: number;
+    coin?: string;
+    status?: number;
+    apiKey?: string;
+  }): Promise<unknown> {
+    try {
+      logger.info('Fetching withdrawal history from binance-proxy', { params: { ...params, apiKey: params.apiKey ? '***' : undefined } });
+
+      const queryString = new URLSearchParams();
+      if (params.startTime !== undefined) {
+        queryString.append('startTime', String(params.startTime));
+      }
+      if (params.endTime !== undefined) {
+        queryString.append('endTime', String(params.endTime));
+      }
+      if (params.limit !== undefined) {
+        queryString.append('limit', String(params.limit));
+      }
+      if (params.coin) {
+        queryString.append('coin', params.coin);
+      }
+      if (params.status !== undefined) {
+        queryString.append('status', String(params.status));
+      }
+
+      const url = `/api/v1/wallet/withdraw/history${queryString.toString() ? `?${queryString.toString()}` : ''}`;
+
+      const headers: Record<string, string> = {};
+      if (params.apiKey) {
+        headers['X-API-Key'] = params.apiKey;
+      }
+
+      const response = await this.client.request<unknown>({
+        method: 'GET',
+        url,
+        headers,
+      });
+
+      logger.info('Successfully fetched withdrawal history from binance-proxy');
+      return response.data;
+    } catch (error) {
+      const httpError = error as HttpClientError;
+      logger.error('Error fetching withdrawal history from binance-proxy', { error: httpError.message });
+      throw new Error(`Failed to fetch withdrawal history: ${httpError.message}`);
+    }
+  }
 }
 
 // Export singleton instance
