@@ -57,6 +57,9 @@ export const processCsv = async (req: Request, res: Response, next: NextFunction
       message = `CSV file was already processed. Found ${result.recordsProcessed} records (${result.recordsInserted} inserted, ${result.recordsDuplicated} duplicated, ${result.recordsFailed} failed)`;
     } else {
       message = `Successfully processed ${result.recordsProcessed} records`;
+      if (result.recordsDuplicated > 0) {
+        message += `. ${result.recordsDuplicated} records were duplicates (already exist in database)`;
+      }
       if (result.recordsFailed > 0 && result.errors && result.errors.length > 0) {
         const errorDetails = result.errors.slice(0, 10).map(e => `Row ${e.index}: ${e.message}`).join('; ');
         message += `. ${result.recordsFailed} records failed. Errors: ${errorDetails}${result.errors.length > 10 ? '...' : ''}`;
@@ -73,6 +76,7 @@ export const processCsv = async (req: Request, res: Response, next: NextFunction
       recordsFailed: result.recordsFailed,
       alreadyProcessed: result.alreadyProcessed,
       errors: result.errors,
+      duplicateDetails: result.duplicateDetails,
     };
 
     res.json(response);

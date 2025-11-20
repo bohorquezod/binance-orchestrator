@@ -17,6 +17,19 @@ export interface ProcessCsvResponse {
   recordsFailed?: number;
   alreadyProcessed?: boolean;
   errors?: Array<{ index: number; message: string }>;
+  duplicateDetails?: Array<{ 
+    index: number; 
+    payloadHash: string; 
+    transaction: Partial<{
+      binanceUserId: string;
+      utcTime: Date | string;
+      account: string;
+      operation: string;
+      coin: string;
+      change: string;
+      remark: string | null;
+    }>;
+  }>;
 }
 
 export interface SyncDataResponse {

@@ -158,6 +158,19 @@ export class CsvProcessorService {
     success: boolean;
     alreadyProcessed?: boolean;
     errors?: Array<{ index: number; message: string }>;
+    duplicateDetails?: Array<{ 
+      index: number; 
+      payloadHash: string; 
+      transaction: Partial<{
+        binanceUserId: string;
+        utcTime: Date | string;
+        account: string;
+        operation: string;
+        coin: string;
+        change: string;
+        remark: string | null;
+      }>;
+    }>;
   }> {
     let csvImportId: number | null = null;
 
@@ -257,16 +270,44 @@ export class CsvProcessorService {
       // Extract results from bulk operation
       const result = bulkResult as {
         inserted?: number;
-        duplicated?: number;
+        duplicates?: number;  // Note: bulk API returns "duplicates" not "duplicated"
         failed?: number;
         errors?: Array<{ index: number; message: string }>;
+        duplicateDetails?: Array<{ 
+          index: number; 
+          payloadHash: string; 
+          transaction: Partial<{
+            binanceUserId: string;
+            utcTime: Date | string;
+            account: string;
+            operation: string;
+            coin: string;
+            change: string;
+            remark: string | null;
+          }>;
+        }>;
       };
 
       const recordsInserted = result.inserted || 0;
-      const recordsDuplicated = result.duplicated || 0;
+      const recordsDuplicated = result.duplicates || 0;  // Fixed: use "duplicates" from API
       const recordsFailed = result.failed || 0;
       const recordsProcessed = transformedData.length;
       const errors = result.errors || [];
+      const duplicateDetails = result.duplicateDetails || [];
+
+      // Build error message with details
+      let errorMessage: string | undefined = undefined;
+      if (errors.length > 0) {
+        errorMessage = `Some records failed: ${errors.map(e => `Row ${e.index}: ${e.message}`).join('; ')}`;
+      } else if (recordsDuplicated > 0 && duplicateDetails.length > 0) {
+        const duplicateInfo = duplicateDetails.slice(0, 10).map(d => {
+          const t = d.transaction;
+          return `Row ${d.index}: ${t.operation || 'N/A'} ${t.coin || 'N/A'} ${t.change || 'N/A'} at ${t.utcTime || 'N/A'}`;
+        }).join('; ');
+        errorMessage = `${recordsDuplicated} records were duplicates: ${duplicateInfo}${duplicateDetails.length > 10 ? '...' : ''}`;
+      } else if (recordsDuplicated > 0) {
+        errorMessage = `${recordsDuplicated} records were duplicates and not inserted (already exist in database)`;
+      }
 
       // Step 8: Update CSV import record with results
       await binanceDbService.updateCsvImport(csvImportId, {
@@ -275,9 +316,7 @@ export class CsvProcessorService {
         recordsInserted,
         recordsDuplicated,
         recordsFailed,
-        errorMessage: errors.length > 0 
-          ? `Some records failed: ${errors.map(e => `Row ${e.index}: ${e.message}`).join('; ')}`
-          : undefined,
+        errorMessage,
       });
       logger.info('Updated CSV import record', { 
         csvImportId, 
@@ -296,6 +335,7 @@ export class CsvProcessorService {
         success: true,
         alreadyProcessed: false,
         errors: errors.length > 0 ? errors : undefined,
+        duplicateDetails: duplicateDetails.length > 0 ? duplicateDetails : undefined,
       };
     } catch (error) {
       const err = error as Error;
