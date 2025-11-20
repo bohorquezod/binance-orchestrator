@@ -274,7 +274,7 @@ export const syncTransactions = async (req: Request, res: Response, next: NextFu
       return;
     }
 
-    const { type, appUserId, apiKey, startTime, endTime, binanceUserId } = req.query as SyncTransactionsRequest;
+    const { type, appUserId, apiKey, startTime, endTime, binanceUserId } = req.query as unknown as SyncTransactionsRequest;
 
     logger.info('Syncing transactions', { type, appUserId, startTime, endTime });
 

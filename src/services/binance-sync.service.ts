@@ -250,7 +250,6 @@ export class BinanceSyncService {
     let totalRecordsDuplicated = 0;
     let totalRecordsFailed = 0;
     let finalStatus: 'success' | 'failed' | 'partial' = 'success';
-    let errorMessage: string | undefined;
 
     try {
       // Calculate time range
@@ -316,7 +315,7 @@ export class BinanceSyncService {
           // Save transactions in bulk
           if (transactions.length > 0) {
             try {
-              const bulkResult = await binanceDbService.saveBulkData(transactions, {
+              const bulkResult = await binanceDbService.saveBulkData(transactions as Record<string, unknown>[], {
                 source: 'cronjob-binance',
                 appUserId,
               }) as {
@@ -395,7 +394,6 @@ export class BinanceSyncService {
       };
     } catch (error) {
       const err = error as Error;
-      errorMessage = err.message;
       finalStatus = 'failed';
 
       logger.error('Error in deposit sync', { syncJobId, error: err.message });
@@ -434,7 +432,6 @@ export class BinanceSyncService {
     let totalRecordsDuplicated = 0;
     let totalRecordsFailed = 0;
     let finalStatus: 'success' | 'failed' | 'partial' = 'success';
-    let errorMessage: string | undefined;
 
     try {
       // Calculate time range
@@ -499,7 +496,7 @@ export class BinanceSyncService {
           // Save transactions in bulk
           if (transactions.length > 0) {
             try {
-              const bulkResult = await binanceDbService.saveBulkData(transactions, {
+              const bulkResult = await binanceDbService.saveBulkData(transactions as Record<string, unknown>[], {
                 source: 'cronjob-binance',
                 appUserId,
               }) as {
@@ -580,7 +577,6 @@ export class BinanceSyncService {
       };
     } catch (error) {
       const err = error as Error;
-      errorMessage = err.message;
       finalStatus = 'failed';
 
       logger.error('Error in withdrawal sync', { syncJobId, error: err.message });
