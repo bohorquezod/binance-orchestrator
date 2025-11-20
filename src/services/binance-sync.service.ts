@@ -315,7 +315,7 @@ export class BinanceSyncService {
           // Save transactions in bulk
           if (transactions.length > 0) {
             try {
-              const bulkResult = await binanceDbService.saveBulkData(transactions as Record<string, unknown>[], {
+              const bulkResult = await binanceDbService.saveBulkData(transactions as unknown as Record<string, unknown>[], {
                 source: 'cronjob-binance',
                 appUserId,
               }) as {
@@ -496,7 +496,7 @@ export class BinanceSyncService {
           // Save transactions in bulk
           if (transactions.length > 0) {
             try {
-              const bulkResult = await binanceDbService.saveBulkData(transactions as Record<string, unknown>[], {
+              const bulkResult = await binanceDbService.saveBulkData(transactions as unknown as Record<string, unknown>[], {
                 source: 'cronjob-binance',
                 appUserId,
               }) as {
