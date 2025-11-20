@@ -156,13 +156,56 @@ export class CsvProcessorService {
     recordsDuplicated: number;
     recordsFailed: number;
     success: boolean;
+    alreadyProcessed?: boolean;
+    errors?: Array<{ index: number; message: string }>;
   }> {
     let csvImportId: number | null = null;
 
     try {
       logger.info('Starting CSV processing flow', { fileId, appUserId });
 
-      // Step 1: Get file metadata to extract filename (optional, fallback to default)
+      // Step 1: Check if CSV has already been processed
+      const existingImport = await binanceDbService.findCsvImportByFileId(fileId);
+      
+      if (existingImport) {
+        const existing = existingImport as {
+          id: number;
+          fileId: string;
+          filename: string;
+          status: 'processing' | 'success' | 'failed';
+          recordsProcessed: number;
+          recordsInserted: number;
+          recordsDuplicated: number;
+          recordsFailed: number;
+          errorMessage?: string | null;
+        };
+
+        logger.info('Found existing CSV import', { 
+          csvImportId: existing.id, 
+          fileId, 
+          status: existing.status 
+        });
+
+        // If already successfully processed, return existing data without error
+        if (existing.status === 'success') {
+          return {
+            csvImportId: existing.id,
+            recordsProcessed: existing.recordsProcessed,
+            recordsInserted: existing.recordsInserted,
+            recordsDuplicated: existing.recordsDuplicated,
+            recordsFailed: existing.recordsFailed,
+            success: true,
+            alreadyProcessed: true,
+          };
+        }
+
+        // If failed or still processing, we'll reprocess it
+        // Use the existing import ID to update it
+        csvImportId = existing.id;
+        logger.info('Reusing existing CSV import record for reprocessing', { csvImportId, fileId });
+      }
+
+      // Step 2: Get file metadata to extract filename (optional, fallback to default)
       let filename = `file-${fileId}`;
       try {
         const fileMetadata = await fileStorageService.getFileMetadata(fileId);
@@ -172,31 +215,39 @@ export class CsvProcessorService {
         logger.warn('Could not retrieve file metadata, using default filename', { fileId, error: (error as Error).message });
       }
 
-      // Step 2: Create CSV import record with status "processing"
-      const csvImport = await binanceDbService.createCsvImport({
-        fileId,
-        filename,
-        status: 'processing',
-      });
-      csvImportId = (csvImport as { id: number })?.id;
+      // Step 3: Create CSV import record with status "processing" if it doesn't exist
       if (!csvImportId) {
-        throw new Error('Failed to create CSV import record');
+        const csvImport = await binanceDbService.createCsvImport({
+          fileId,
+          filename,
+          status: 'processing',
+        });
+        csvImportId = (csvImport as { id: number })?.id;
+        if (!csvImportId) {
+          throw new Error('Failed to create CSV import record');
+        }
+        logger.info('Created CSV import record', { csvImportId, fileId });
+      } else {
+        // Update existing record to processing status
+        await binanceDbService.updateCsvImport(csvImportId, {
+          status: 'processing',
+          errorMessage: null,
+        });
       }
-      logger.info('Created CSV import record', { csvImportId, fileId });
 
-      // Step 3: Get CSV from file-storage-api
+      // Step 4: Get CSV from file-storage-api
       const csvContent = await fileStorageService.getCsvFile(fileId);
       logger.info('Retrieved CSV file', { fileId, contentLength: csvContent.length });
 
-      // Step 4: Parse CSV
+      // Step 5: Parse CSV
       const parsedData = await this.parseCsv(csvContent);
       logger.info('Parsed CSV', { fileId, rowCount: parsedData.rows.length });
 
-      // Step 5: Transform to DB format
+      // Step 6: Transform to DB format
       const transformedData = await this.transformToDbFormat(parsedData, appUserId, filename);
       logger.info('Transformed CSV data', { fileId, recordCount: transformedData.length });
 
-      // Step 6: Save to binance-db-api (bulk insert) with source and appUserId
+      // Step 7: Save to binance-db-api (bulk insert) with source and appUserId
       const bulkResult = await binanceDbService.saveBulkData(transformedData, {
         source: `csv:${filename}`,
         appUserId,
@@ -208,22 +259,33 @@ export class CsvProcessorService {
         inserted?: number;
         duplicated?: number;
         failed?: number;
+        errors?: Array<{ index: number; message: string }>;
       };
 
       const recordsInserted = result.inserted || 0;
       const recordsDuplicated = result.duplicated || 0;
       const recordsFailed = result.failed || 0;
       const recordsProcessed = transformedData.length;
+      const errors = result.errors || [];
 
-      // Step 7: Update CSV import record with results
+      // Step 8: Update CSV import record with results
       await binanceDbService.updateCsvImport(csvImportId, {
         status: 'success',
         recordsProcessed,
         recordsInserted,
         recordsDuplicated,
         recordsFailed,
+        errorMessage: errors.length > 0 
+          ? `Some records failed: ${errors.map(e => `Row ${e.index}: ${e.message}`).join('; ')}`
+          : null,
       });
-      logger.info('Updated CSV import record', { csvImportId, recordsInserted, recordsDuplicated, recordsFailed });
+      logger.info('Updated CSV import record', { 
+        csvImportId, 
+        recordsInserted, 
+        recordsDuplicated, 
+        recordsFailed,
+        errorCount: errors.length 
+      });
 
       return {
         csvImportId,
@@ -232,6 +294,8 @@ export class CsvProcessorService {
         recordsDuplicated,
         recordsFailed,
         success: true,
+        alreadyProcessed: false,
+        errors: errors.length > 0 ? errors : undefined,
       };
     } catch (error) {
       const err = error as Error;

@@ -52,14 +52,27 @@ export const processCsv = async (req: Request, res: Response, next: NextFunction
 
     const result = await csvProcessorService.processAndSave(fileId, appUserId);
 
+    let message: string;
+    if (result.alreadyProcessed) {
+      message = `CSV file was already processed. Found ${result.recordsProcessed} records (${result.recordsInserted} inserted, ${result.recordsDuplicated} duplicated, ${result.recordsFailed} failed)`;
+    } else {
+      message = `Successfully processed ${result.recordsProcessed} records`;
+      if (result.recordsFailed > 0 && result.errors && result.errors.length > 0) {
+        const errorDetails = result.errors.slice(0, 10).map(e => `Row ${e.index}: ${e.message}`).join('; ');
+        message += `. ${result.recordsFailed} records failed. Errors: ${errorDetails}${result.errors.length > 10 ? '...' : ''}`;
+      }
+    }
+
     const response: ProcessCsvResponse = {
       success: result.success,
-      message: `Successfully processed ${result.recordsProcessed} records`,
+      message,
       csvImportId: result.csvImportId,
       recordsProcessed: result.recordsProcessed,
       recordsInserted: result.recordsInserted,
       recordsDuplicated: result.recordsDuplicated,
       recordsFailed: result.recordsFailed,
+      alreadyProcessed: result.alreadyProcessed,
+      errors: result.errors,
     };
 
     res.json(response);

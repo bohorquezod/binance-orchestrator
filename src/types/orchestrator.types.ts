@@ -15,6 +15,8 @@ export interface ProcessCsvResponse {
   recordsInserted?: number;
   recordsDuplicated?: number;
   recordsFailed?: number;
+  alreadyProcessed?: boolean;
+  errors?: Array<{ index: number; message: string }>;
 }
 
 export interface SyncDataResponse {

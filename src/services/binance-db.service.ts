@@ -144,6 +144,43 @@ export class BinanceDbService {
   }
 
   /**
+   * Finds an existing CSV import by fileId
+   * @param fileId File ID to search for
+   * @returns CSV import record or null if not found
+   */
+  async findCsvImportByFileId(fileId: string): Promise<unknown | null> {
+    try {
+      logger.info('Finding CSV import by fileId', { fileId });
+
+      const response = await this.client.request<unknown>({
+        method: 'GET',
+        url: `/api/csv-imports?fileId=${encodeURIComponent(fileId)}&limit=1`,
+      });
+
+      const result = response.data as {
+        data?: unknown[];
+        total?: number;
+      };
+
+      if (result.data && result.data.length > 0) {
+        logger.info('Found existing CSV import', { fileId });
+        return result.data[0];
+      }
+
+      logger.info('No existing CSV import found', { fileId });
+      return null;
+    } catch (error) {
+      const httpError = error as HttpClientError;
+      if (httpError.isHttpError && httpError.status === 404) {
+        logger.info('No CSV import found for fileId', { fileId });
+        return null;
+      }
+      logger.error('Error finding CSV import by fileId', { fileId, error: httpError.message });
+      throw new Error(`Failed to find CSV import: ${httpError.message}`);
+    }
+  }
+
+  /**
    * Creates a CSV import record in binance-db-api
    * @param data CSV import data
    * @returns Created CSV import record
