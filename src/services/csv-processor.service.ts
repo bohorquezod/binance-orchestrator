@@ -162,10 +162,15 @@ export class CsvProcessorService {
     try {
       logger.info('Starting CSV processing flow', { fileId, appUserId });
 
-      // Step 1: Get file metadata to extract filename
-      const fileMetadata = await fileStorageService.getFileMetadata(fileId);
-      const filename = (fileMetadata as { filename?: string })?.filename || `file-${fileId}`;
-      logger.info('Retrieved file metadata', { fileId, filename });
+      // Step 1: Get file metadata to extract filename (optional, fallback to default)
+      let filename = `file-${fileId}`;
+      try {
+        const fileMetadata = await fileStorageService.getFileMetadata(fileId);
+        filename = (fileMetadata as { filename?: string })?.filename || filename;
+        logger.info('Retrieved file metadata', { fileId, filename });
+      } catch (error) {
+        logger.warn('Could not retrieve file metadata, using default filename', { fileId, error: (error as Error).message });
+      }
 
       // Step 2: Create CSV import record with status "processing"
       const csvImport = await binanceDbService.createCsvImport({
